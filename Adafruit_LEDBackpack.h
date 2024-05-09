@@ -29,6 +29,7 @@
 #endif
 
 #include <Adafruit_I2CDevice.h>
+#include <Adafruit_I2CDeviceSoft.h>
 
 #include "Adafruit_GFX.h"
 
@@ -104,6 +105,31 @@ public:
 
   */
   bool begin(uint8_t _addr = 0x70, TwoWire *theWire = &Wire);
+
+  virtual bool begin(SoftI2C* wire, uint8_t i2c_addr = 0x70) {
+    if (this->i2c_dev)
+      delete this->i2c_dev;
+    this->i2c_dev = new Adafruit_I2CDeviceSoft(i2c_addr, wire);
+    if (!this->i2c_dev->begin())
+      return false;
+
+    // turn on oscillator
+    uint8_t buffer[1] = {0x21};
+    this->i2c_dev->write(buffer, 1);
+
+    // internal RAM powers up with garbage/random values.
+    // ensure internal RAM is cleared before turning on display
+    // this ensures that no garbage pixels show up on the display
+    // when it is turned on.
+    clear();
+    writeDisplay();
+
+    blinkRate(HT16K33_BLINK_OFF);
+
+    setBrightness(15); // max brightness
+
+    return true;
+  };
 
   /*!
     @brief  Turn display on or off
